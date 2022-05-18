@@ -175,25 +175,27 @@
     };
     Loader.open();
     axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*';
+    'Access-Control-Allow-Origin'
     axios.defaults.headers.post['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,PATCH,OPTIONS';
-    axios.get('{{server_url}}/modis?lon={{lon}}&lat={{lat}}')
+    axios.get('{{server_url}}/sentinel/evi?lon={{lon}}&lat={{lat}}&start_date={{ start_date }}&&end_date={{ end_date }}')
         .then(function (response) {
             const dados = response.data;
             new Chart(document.getElementById("line-chart"), {
                 type: 'line',
                 responsive: true,
                 data: {
-                    labels: dados.map(d => moment(d.label, 'DD/MM/YYYY').format('DD-MM-YYYY')),
+
+                    labels: dados.dates.map(d => moment(d).format('DD-MM-YYYY')),
                     datasets: [
                         {
-                            data: dados.map(d => d.ndvi),
-                            label: "NDVI",
+                            data: dados.evi_wtk_smooth_series,
+                            label: "EVI Suavizado por Whittaker",
                             borderColor: "#009933",
                             fill: true
                         },
                         {
-                            data:  dados.map(d => d.evi),
-                            label: "EVI",
+                            data:  dados.evi_raw_series,
+                            label: "EVI Original",
                             borderColor: "#8e5ea2",
                             fill: true
                         }
@@ -202,7 +204,7 @@
                 options: {
                     title: {
                         display: true,
-                        text: 'Serie Temporal MODIS - NDVI para o ponto [{{lat}},  {{lon}}]'
+                        text: 'Serie Temporal Sentinel - EVI para o ponto [{{lat}},  {{lon}}]'
                     }
                 }
             });

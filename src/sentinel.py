@@ -346,9 +346,9 @@ def get_series(lon, lat, start_date, end_date):
 
 
     data = {
-        "evi_series": evi_series.tolist(),
-        "evi_dates": eviDates,
-        "wtk_smooth": wtk_smooth.tolist()
+        "evi_raw_series": evi_series.tolist(),
+        "dates": eviDates,
+        "evi_wtk_smooth_series": wtk_smooth.tolist()
     }
 
     return data

@@ -83,7 +83,9 @@ client = MongoClient(config('MONGO_HOST'), int(config('MONGO_PORT')))
 db = client[config('MONGO_DB')]
 
 origins = [
-    "https://tvi.lapig.iesa.ufg.br"
+    "https://tvi.lapig.iesa.ufg.br",
+    "http://127.0.0.1:8000/",
+    "http://localhost:8000"
 ]
 
 app.add_middleware(
@@ -106,14 +108,14 @@ def read_root():
     return {'ok': True}
 
 
-@app.get('/modis/{lon}/{lat}')
+@app.get('/modis')
 def ndvi_data(lon: float, lat: float):
     series = db.evi_ndvi.find_one({"lon": lon, "lat": lat})
     if series is not None:
         return series['data']
     else:
         _data = getMODIS_Series(lon, lat)
-        db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "data": _data})
+        #db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "data": _data})
         return _data
 
 # @app.get('/sentinel/evi/{lon}/{lat}/{start_date}/{end_date}')
@@ -126,13 +128,17 @@ def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
         _data = get_series(lon, lat, start_date, end_date)
         # import web_pdb;
         # web_pdb.set_trace()
-        db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
+        #db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
         json_compatible_item_data = jsonable_encoder(_data)
         return _data
 
-@app.get('/modis/chart/{lon}/{lat}', response_class=HTMLResponse)
+@app.get('/modis/chart', response_class=HTMLResponse)
 def ndvi_chart(request: Request, lon: float, lat: float):
     return templates.TemplateResponse("ndvi.html", {"request": request, "lon": lon, "lat": lat, "server_url": config('SERVER_URL')})
+
+@app.get('/sentinel/evi/chart', response_class=HTMLResponse)
+def ndvi_chart(request: Request, lon: float, lat: float, start_date: str, end_date: str):
+    return templates.TemplateResponse("sentinel.html", {"request": request, "lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "server_url": config('SERVER_URL')})
 
 
 if __name__ == "__main__":
