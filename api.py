@@ -128,7 +128,7 @@ def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
         # web_pdb.set_trace()
         db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
         json_compatible_item_data = jsonable_encoder(_data)
-        return JSONResponse(content=json_compatible_item_data)
+        return _data
 
 @app.get('/modis/chart/{lon}/{lat}', response_class=HTMLResponse)
 def ndvi_chart(request: Request, lon: float, lat: float):
