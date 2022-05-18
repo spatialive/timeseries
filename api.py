@@ -29,7 +29,6 @@ def gee_multi_credentials(credentials_dir):
 
 
 def getMODIS_Series(lon, lat):
-    gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
     ee.Initialize()
 
     def mask_badPixels(img):
@@ -69,6 +68,8 @@ app = FastAPI()
 
 client = MongoClient(config('MONGO_HOST'), int(config('MONGO_PORT')))
 db = client[config('MONGO_DB')]
+
+gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
 
 origins = [
     "https://tvi.lapig.iesa.ufg.br"

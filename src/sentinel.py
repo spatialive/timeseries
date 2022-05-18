@@ -1,42 +1,15 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import ee
 import pywt
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal, interpolate
-from scipy.integrate import simps,quad
+from IPython import get_ipython
+from scipy import interpolate
 import scipy.sparse as sparse
 from scipy.sparse.linalg import splu
-from tsmoothie.smoother import DecomposeSmoother
 import pandas as pd
-from ipyleaflet import Marker
-import geemap
-from ipywidgets import interact
 get_ipython().magic('matplotlib inline')
-
-from numpy import float32, nan, isfinite, nan_to_num
-
 import numpy as np
 
-#!pip install astropy==3.0.5
-from astropy.convolution import convolve
-from astropy.convolution.kernels import Gaussian1DKernel
-
-
-# In[2]:
-
-
-# ee.Authenticate()
 ee.Initialize()
-
-
-# In[3]:
-
 
 AOI = ee.Geometry.Point(-49.52006, -16.74899)
 START_DATE = '2018-08-01'
@@ -46,9 +19,6 @@ CLD_PRB_THRESH = 50
 NIR_DRK_THRESH = 0.15
 CLD_PRJ_DIST = 1
 BUFFER = 50
-
-
-# In[4]:
 
 
 #Build a Sentinel-2 collection
@@ -89,8 +59,7 @@ def add_cloud_bands(img):
 
     # Add the cloud probability layer and cloud mask as image bands.
     return img.addBands(ee.Image([cld_prb, is_cloud]))
-  
-#
+
 def add_shadow_bands(img):
     # Identify water pixels from the SCL band.
     not_water = img.select('SCL').neq(6)
@@ -134,10 +103,6 @@ def add_cld_shdw_mask(img):
 
     # Add the final cloud-shadow mask to the image.
     return img_cloud_shadow.addBands(is_cld_shdw)
-
-
-# In[5]:
-
 
 ##Adding a NDVI band
 def addNDVI(img):
@@ -197,9 +162,6 @@ def apply_cld_shdw_mask(img):
     return img.select('B.*').updateMask(not_cld_shdw)
 
 
-# In[6]:
-
-
 s2_sr_cld_col = get_s2_sr_cld_col(AOI, START_DATE, END_DATE)
 
 def apply_cld_shdw_mask(img):
@@ -224,7 +186,6 @@ def addEVI(img):
     }).rename('evi')
     return img.addBands([evi])
 
-
 s2_sr_median = (s2_sr_cld_col.map(add_cld_shdw_mask)
                              .map(apply_cld_shdw_mask)
                              .median())
@@ -235,44 +196,24 @@ s2_sr = (s2_sr_cld_col.map(add_cld_shdw_mask)
                       .map(addEVI))
 
 
-# In[7]:
-
-
 l = s2_sr.filterBounds(AOI).getRegion(AOI, 5).getInfo()
 out = [dict(zip(l[0], values)) for values in l[1:]]
 df = pd.DataFrame(out)
 print(df)
 
 
-# In[8]:
-
-
 df['id'] = df.id.str[0:8]
 df['id'] = pd.to_datetime(df['id'])
-
-
-# In[9]:
 
 
 evi_series = np.array(df['evi'])
 evi_dates = np.array(df['id'])
 
 
-# In[10]:
-
-
 plt.figure(1,figsize=(20,8),clear=True)
 plt.scatter(evi_dates,evi_series,color="black",marker="+")
 plt.show()
 
-
-# In[241]:
-
-
-
-
-
-# In[11]:
 
 
 """
@@ -375,7 +316,6 @@ def whittaker_smooth(y, lmbd, d = 2):
 #knowledge of the CeCILL-B license and that you accept its terms.
 
 
-# In[12]:
 
 
 def fill_nan(A):
@@ -389,8 +329,6 @@ def fill_nan(A):
     return B
 
 
-# In[13]:
-
 
 
 
@@ -398,23 +336,11 @@ def fill_nan(A):
 wtk_smooth = whittaker_smooth(fill_nan(evi_series),10,d=2)
 
 
-# In[14]:
 
 
 plt.figure(1,figsize=(20,8),clear=True)
 plt.scatter(evi_dates,evi_series,color="black",marker="+")
 plt.plot(evi_dates,wtk_smooth)
 plt.show()
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
 
 
