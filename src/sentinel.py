@@ -339,10 +339,15 @@ def get_series(lon, lat, start_date, end_date):
     # plt.scatter(evi_dates, evi_series, color="black", marker="+")
     # plt.plot(evi_dates, wtk_smooth)
     # plt.show()
+    eviDates = []
+
+    for date in evi_dates:
+        eviDates.append(np.datetime_as_string(date, unit='D'))
+
 
     data = {
         "evi_series": evi_series.tolist(),
-        "evi_dates": evi_dates.tolist(),
+        "evi_dates": eviDates,
         "wtk_smooth": wtk_smooth.tolist()
     }
 
