@@ -1,3 +1,5 @@
+import typing
+
 import ee
 import os
 import glob
@@ -15,11 +17,8 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List, Union
-from decimal import Decimal
-import numpy as np
-
-
+from typing import List, Union, Any
+import orjson
 
 def gee_multi_credentials(credentials_dir):
     def mpb_get_credentials_path():
@@ -72,8 +71,13 @@ def getMODIS_Series(lon, lat):
     ee.Reset()
     return data
 
+class ORJSONResponse(JSONResponse):
+    media_type = "application/json"
 
-app = FastAPI()
+    def render(self, content: typing.Any) -> bytes:
+        return orjson.dumps(content)
+
+app = FastAPI(default_response_class=ORJSONResponse)
 
 client = MongoClient(config('MONGO_HOST'), int(config('MONGO_PORT')))
 db = client[config('MONGO_DB')]
@@ -115,12 +119,11 @@ def ndvi_data(lon: float, lat: float):
 # @app.get('/sentinel/evi/{lon}/{lat}/{start_date}/{end_date}')
 @app.get('/sentinel/evi')
 def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
-    print(lon, lat, start_date, end_date)
     series = db.sentinel_evi.find_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date})
     if series is not None:
         return series
     else:
-        _data: Data = Data(**get_series(lon, lat, start_date, end_date))
+        _data = get_series(lon, lat, start_date, end_date)
         # import web_pdb;
         # web_pdb.set_trace()
         db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})

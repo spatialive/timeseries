@@ -341,9 +341,9 @@ def get_series(lon, lat, start_date, end_date):
     # plt.show()
 
     data = {
-        "evi_series": [f'{i:.6f}' for i in df['evi'].tolist()],
+        "evi_series": evi_series.tolist(),
         "evi_dates": evi_dates.tolist(),
-        "wtk_smooth": [1, 2, 3]
+        "wtk_smooth": wtk_smooth.tolist()
     }
 
     return data
