@@ -9,8 +9,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
-
 from decouple import config
+from src.sentinel import get_series
 
 
 def gee_multi_credentials(credentials_dir):
@@ -29,6 +29,7 @@ def gee_multi_credentials(credentials_dir):
 
 
 def getMODIS_Series(lon, lat):
+    gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
     ee.Initialize()
 
     def mask_badPixels(img):
@@ -69,8 +70,6 @@ app = FastAPI()
 client = MongoClient(config('MONGO_HOST'), int(config('MONGO_PORT')))
 db = client[config('MONGO_DB')]
 
-gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
-
 origins = [
     "https://tvi.lapig.iesa.ufg.br"
 ]
@@ -98,6 +97,18 @@ def ndvi_data(lon: float, lat: float):
     else:
         _data = getMODIS_Series(lon, lat)
         db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "data": _data})
+        return _data
+
+# @app.get('/sentinel/evi/{lon}/{lat}/{start_date}/{end_date}')
+@app.get('/sentinel/evi')
+def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
+    print(lon, lat, start_date, end_date)
+    series = db.sentinel_evi.find_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date})
+    if series is not None:
+        return series
+    else:
+        _data = get_series(lon, lat, start_date, end_date)
+        db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
         return _data
 
 @app.get('/modis/chart/{lon}/{lat}', response_class=HTMLResponse)
