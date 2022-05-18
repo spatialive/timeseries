@@ -11,6 +11,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from decouple import config
 from src.sentinel import get_series
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Union
+from decimal import Decimal
+import numpy as np
+
 
 
 def gee_multi_credentials(credentials_dir):
@@ -84,6 +92,11 @@ app.add_middleware(
 
 templates = Jinja2Templates(directory="templates")
 
+class Data(BaseModel):
+    evi_series: List[str]
+    evi_dates: List[datetime]
+    wtk_smooth: List[float]
+
 @app.get('/')
 def read_root():
     return {'ok': True}
@@ -107,9 +120,12 @@ def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
     if series is not None:
         return series
     else:
-        _data = get_series(lon, lat, start_date, end_date)
+        _data: Data = Data(**get_series(lon, lat, start_date, end_date))
+        # import web_pdb;
+        # web_pdb.set_trace()
         db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
-        return _data
+        json_compatible_item_data = jsonable_encoder(_data)
+        return JSONResponse(content=json_compatible_item_data)
 
 @app.get('/modis/chart/{lon}/{lat}', response_class=HTMLResponse)
 def ndvi_chart(request: Request, lon: float, lat: float):
