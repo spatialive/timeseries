@@ -1,4 +1,4 @@
-FROM python:3.8.13-alpine3.15
+FROM registry.lapig.iesa.ufg.br/lapig-images-prod/time_series_sentinel:latest
 
 LABEL maintainer="Renato Gomes <renatogomessilverio@gmail.com>"
 
