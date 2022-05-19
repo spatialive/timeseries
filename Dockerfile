@@ -10,7 +10,7 @@ RUN /bin/sh -c "apk add --no-cache --virtual bash build-dependencies musl-dev li
     apk update && apk add figlet git curl wget  && \
     mkdir -p /APP && cd /APP && git clone -b ${BRANCH} ${URL_TO_APPLICATION_GITHUB} && \
     cd timeseries/ && pip3 install -r requirements.txt && \
-    echo 'figlet -t "Lapig Docker Timeseries"' >> ~/.bashrc && \
+    echo 'figlet -t "Lapig Docker Timeseries Sentinel"' >> ~/.bashrc && \
     chmod +x /APP/timeseries/api.py
 
 WORKDIR /APP
