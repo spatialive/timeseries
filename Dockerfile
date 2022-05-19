@@ -6,7 +6,6 @@ LABEL maintainer="Renato Gomes <renatogomessilverio@gmail.com>"
 ENV URL_TO_APPLICATION_GITHUB="https://github.com/spatialive/timeseries.git"
 ENV BRANCH="main"
 
-
 RUN apt-get update && apt-get -y install figlet procps net-tools curl python3-dev build-essential wget git && \
     if [ -d "/APP/timeseries" ]; then rm -Rf /APP/timeseries; fi && \
     mkdir -p /APP && cd /APP && git clone -b ${BRANCH} ${URL_TO_APPLICATION_GITHUB} && \
