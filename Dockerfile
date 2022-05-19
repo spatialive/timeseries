@@ -11,7 +11,6 @@ RUN apt-get update && apt-get -y install figlet procps net-tools curl python3-de
     if [ -d "/APP/timeseries" ]; then rm -Rf /APP/timeseries; fi && \
     mkdir -p /APP && cd /APP && git clone -b ${BRANCH} ${URL_TO_APPLICATION_GITHUB} && \
     cd timeseries/ && pip3 install -r requirements.txt && \
-    echo 'figlet -t "Lapig Docker Timeseries Sentinel"' >> ~/.bashrc && \
     chmod +x /APP/timeseries/api.py
     
 WORKDIR /APP
