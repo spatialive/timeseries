@@ -3,7 +3,7 @@ FROM python:3.8.13-alpine3.15
 LABEL maintainer="Renato Gomes <renatogomessilverio@gmail.com>"
 
 # Clone app and npm install on server
-ENV URL_TO_APPLICATION_GITHUB="https://github.com/lapig-ufg/timeseries.git"
+ENV URL_TO_APPLICATION_GITHUB="https://github.com/spatialive/timeseries.git"
 ENV BRANCH="main"
 
 RUN /bin/sh -c "apk add --no-cache bash" && \
