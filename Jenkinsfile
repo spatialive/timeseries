@@ -1,11 +1,11 @@
 node {
 
     load "$JENKINS_HOME/.envvars"
-    def application_name= "app_time_series"
+    def application_name= "app_time_series_sentinel"
 
         stage('Checkout') {
             git branch: 'main',
-            url: 'https://github.com/lapig-ufg/timeseries.git'
+            url: 'https://github.com/spatialive/timeseries.git'
         }
         stage('Validate') {
             sh 'git pull origin main'
