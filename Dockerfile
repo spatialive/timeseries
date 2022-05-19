@@ -1,4 +1,4 @@
-FROM python:3.8.13-slim
+FROM registry.lapig.iesa.ufg.br/lapig-images-prod/time_series_sentinel:base
 
 LABEL maintainer="Renato Gomes <renatogomessilverio@gmail.com>"
 
@@ -8,6 +8,7 @@ ENV BRANCH="main"
 
 
 RUN apt-get update && apt-get -y install figlet procps net-tools curl python3-dev build-essential wget git && \
+    if [ -d "/APP/timeseries" ]; then rm -Rf /APP/timeseries; fi && \
     mkdir -p /APP && cd /APP && git clone -b ${BRANCH} ${URL_TO_APPLICATION_GITHUB} && \
     cd timeseries/ && pip3 install -r requirements.txt && \
     echo 'figlet -t "Lapig Docker Timeseries Sentinel"' >> ~/.bashrc && \
