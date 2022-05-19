@@ -14,11 +14,9 @@ RUN /bin/sh -c "apk add --no-cache bash build-dependencies musl-dev linux-header
     cd timeseries/ && pip3 install -r requirements.txt && \
     echo 'figlet -t "Lapig Docker Timeseries Sentinel"' >> ~/.bashrc && \
     chmod +x /APP/timeseries/api.py
-
-SHELL ["/bin/bash", "-c"] 
-
+    
 WORKDIR /APP
 
-CMD [ "/bin/bash", "-c", "cd /APP/timeseries && python3 api.py; tail -f /dev/null"]
+CMD [ "/bin/sh", "-c", "cd /APP/timeseries && python3 api.py; tail -f /dev/null"]
 
 ENTRYPOINT [ "/APP/Monitora.sh"]
