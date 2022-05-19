@@ -9,6 +9,7 @@ ENV BRANCH="main"
 RUN /bin/sh -c "apk add --no-cache --virtual bash build-dependencies musl-dev linux-headers g++ gcc gfortran python3-dev \
     py-pip build-base wget freetype-dev libpng-dev openblas-dev" && \
     apk update && apk add figlet git curl wget  && \
+    if [ -d "/APP/timeseries" ]; then rm -Rf /APP/timeseries; fi && \
     mkdir -p /APP && cd /APP && git clone -b ${BRANCH} ${URL_TO_APPLICATION_GITHUB} && \
     cd timeseries/ && pip3 install -r requirements.txt && \
     echo 'figlet -t "Lapig Docker Timeseries Sentinel"' >> ~/.bashrc && \
