@@ -6,7 +6,7 @@ LABEL maintainer="Renato Gomes <renatogomessilverio@gmail.com>"
 ENV URL_TO_APPLICATION_GITHUB="https://github.com/spatialive/timeseries.git"
 ENV BRANCH="main"
 
-RUN /bin/sh -c "apk add --no-cache bash" && \
+RUN /bin/sh -c "apk add --no-cache --virtual bash build-dependencies musl-dev linux-headers g++" && \
     apk update && apk add figlet git curl wget  && \
     mkdir -p /APP && cd /APP && git clone -b ${BRANCH} ${URL_TO_APPLICATION_GITHUB} && \
     cd timeseries/ && pip3 install -r requirements.txt && \
