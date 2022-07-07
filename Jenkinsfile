@@ -1,7 +1,7 @@
 node {
 
     load "$JENKINS_HOME/.envvars"
-    def application_name= "app_time_series_sentinel"
+    def application_name= "time_series_sentinel"
 
         stage('Checkout') {
             git branch: 'main',
