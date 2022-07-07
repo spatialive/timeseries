@@ -83,8 +83,9 @@ client = MongoClient(config('MONGO_HOST'), int(config('MONGO_PORT')))
 db = client[config('MONGO_DB')]
 
 origins = [
+    "*",
     "https://tvi.lapig.iesa.ufg.br",
-    "http://127.0.0.1:8000/",
+    "http://127.0.0.1:8000",
     "http://localhost:8000"
 ]
 
@@ -129,7 +130,6 @@ def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
         # import web_pdb;
         # web_pdb.set_trace()
         #db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
-        json_compatible_item_data = jsonable_encoder(_data)
         return _data
 
 @app.get('/modis/chart', response_class=HTMLResponse)

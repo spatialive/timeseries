@@ -14,6 +14,7 @@ CLD_PRB_THRESH = 50
 NIR_DRK_THRESH = 0.15
 CLD_PRJ_DIST = 1
 BUFFER = 50
+SCALE = 15
 
 def gee_multi_credentials(credentials_dir):
     def mpb_get_credentials_path():
@@ -116,29 +117,6 @@ def add_cld_shdw_mask(img):
 def addNDVI(img):
     ndvi = img.normalizedDifference(['B8', 'B4']).rename('ndvi')
     return img.addBands([ndvi])
-
-
-# def scale_factor(img):
-#     return image.multiply(0.0001).copyProperties(img, ['system:time_start'])# mapping function to multiply by the scale factor
-
-# def maskS2clouds(img):
-#     qa = img.select('QA60')
-#     cloudBitMask = 1 << 10
-#     cirrusBitMask = 1 << 11
-#     mask = qa.bitwiseAnd(cloudBitMask).eq(0)and(qa.bitwiseAnd(cirrusBitMask).eq(0))
-#     return img.updateMask(mask).divide(10000)
-
-
-# img_collection_S2_SR = ee.ImageCollection("COPERNICUS/S2_SR").filterDate(start=start, opt_end=end).map(addNDVI).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', CLOUD_FILTER)).filterBounds(geometry)
-# s2_cloudless_col = ee.ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY').filterDate(start=start, opt_end=end).filterBounds(geometry)
-# img_collection_S2_SR_cm = ee.ImageCollection(ee.Join.saveFirst('s2cloudless').apply(**{
-#         'primary': img_collection_S2_SR,
-#         'secondary': s2_cloudless_col,
-#         'condition': ee.Filter.equals(**{
-#             'leftField': 'system:index',
-#             'rightField': 'system:index'
-#         })
-#     }))
 
 def get_s2_sr_cld_col(aoi, start_date, end_date):
     # Import and filter S2 SR.
@@ -300,18 +278,48 @@ def fill_nan(A):
     B = np.where(np.isfinite(A), A, f(inds))
     return B
 
+def chirps_preciptation(lat: float, lon: float, start_date: str, end_date: str, scale: int) -> list:
+    # Chirps Image Collection
+    chirps_pentad = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
+
+    # Criação da feature Point no earth engine
+    geometry = ee.Geometry.Point(lat,lon)
+
+    # Extração da série temporal do CHIRPS Pentad do EE para o Python
+    tent = 0
+    while True:
+        try:
+            chirps_p = chirps_pentad.filterBounds(geometry).filterDate(start_date,end_date).getRegion(geometry, scale).getInfo()
+        except Exception as e:
+            tent += 1
+            if (tent == 20):
+                raise Exception(f'Error na conexão com o GEE. Mensagem de erro:{e}')
+            continue
+        break
+
+    out = [dict(zip(chirps_p[0], values)) for values in chirps_p[1:]]
+
+    # Transformaçẽos da série temporal de CHIRPS para DataFrame
+    df_chirps = pd.DataFrame(out)
+    df_chirps = df_chirps.loc[:,['id','precipitation']]
+    df_chirps['id'] = pd.to_datetime(df_chirps['id'])
+    df_chirps = df_chirps.sort_values(by=['id'])
+    df_chirps = df_chirps.rename(columns={'id':'Date'})
+    df_chirps = df_chirps.set_index('Date')
+    df_chirps = df_chirps.resample('8D').sum()
+
+    #Transformação para array
+    chirps_dates = df_chirps.index.to_numpy()
+    chirps_values = df_chirps.precipitation.to_numpy()
+
+    return chirps_dates, chirps_values
+
 def get_series(lon, lat, start_date, end_date):
     gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
     ee.Initialize()
     AOI = ee.Geometry.Point(lon, lat)
 
-    # s2_sr_cld_col_eval = get_s2_sr_cld_col(AOI, start_date, end_date)
-
     s2_sr_cld_col = get_s2_sr_cld_col(AOI, start_date, end_date)
-
-    # s2_sr_median = (s2_sr_cld_col.map(add_cld_shdw_mask)
-    #                 .map(apply_cld_shdw_mask)
-    #                 .median())
 
     s2_sr = (s2_sr_cld_col.map(add_cld_shdw_mask)
              .map(apply_cld_shdw_mask)
@@ -328,27 +336,22 @@ def get_series(lon, lat, start_date, end_date):
     evi_series = np.array(df['evi'])
     evi_dates = np.array(df['id'])
 
-    # plt.figure(1, figsize=(20, 8), clear=True)
-    # plt.scatter(evi_dates, evi_series, color="black", marker="+")
-    # plt.show()
-
     ### Whittaker smoother
     wtk_smooth = whittaker_smooth(fill_nan(evi_series), 10, d=2)
 
-    # plt.figure(1, figsize=(20, 8), clear=True)
-    # plt.scatter(evi_dates, evi_series, color="black", marker="+")
-    # plt.plot(evi_dates, wtk_smooth)
-    # plt.show()
+    chirps_dates, chirps_values = chirps_preciptation(lat, lon, start_date, end_date, SCALE)
+
     eviDates = []
 
     for date in evi_dates:
         eviDates.append(np.datetime_as_string(date, unit='D'))
 
-
+    print(len(chirps_values), len(eviDates), len(evi_series),  len(wtk_smooth))
     data = {
-        "evi_raw_series": evi_series.tolist(),
         "dates": eviDates,
-        "evi_wtk_smooth_series": wtk_smooth.tolist()
+        "evi_raw_series": evi_series.tolist(),
+        "evi_wtk_smooth_series": wtk_smooth.tolist(),
+        "precipitation": chirps_values.tolist(),
     }
 
     return data
