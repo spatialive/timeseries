@@ -12,13 +12,13 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from decouple import config
-from src.sentinel import get_series
-from fastapi.encoders import jsonable_encoder
+from src.timeseries import get_timeseries
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Union, Any
 import orjson
+
 
 def gee_multi_credentials(credentials_dir):
     def mpb_get_credentials_path():
@@ -36,8 +36,6 @@ def gee_multi_credentials(credentials_dir):
 
 
 def getMODIS_Series(lon, lat):
-    gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
-    ee.Initialize()
 
     def mask_badPixels(img):
         mask = img.select('SummaryQA').eq(0)
@@ -71,11 +69,13 @@ def getMODIS_Series(lon, lat):
     ee.Reset()
     return data
 
+
 class ORJSONResponse(JSONResponse):
     media_type = "application/json"
 
     def render(self, content: typing.Any) -> bytes:
         return orjson.dumps(content)
+
 
 app = FastAPI(default_response_class=ORJSONResponse)
 
@@ -99,10 +99,12 @@ app.add_middleware(
 
 templates = Jinja2Templates(directory="templates")
 
+
 class Data(BaseModel):
     evi_series: List[str]
     evi_dates: List[datetime]
     wtk_smooth: List[float]
+
 
 @app.get('/')
 def read_root():
@@ -116,29 +118,34 @@ def ndvi_data(lon: float, lat: float):
         return series['data']
     else:
         _data = getMODIS_Series(lon, lat)
-        #db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "data": _data})
+        # db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "data": _data})
         return _data
 
-# @app.get('/sentinel/evi/{lon}/{lat}/{start_date}/{end_date}')
+
 @app.get('/sentinel/evi')
 def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
     series = db.sentinel_evi.find_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date})
     if series is not None:
         return series
     else:
-        _data = get_series(lon, lat, start_date, end_date)
+        _data = get_timeseries(lon, lat, start_date, end_date, 16, 'savgol')
         # import web_pdb;
         # web_pdb.set_trace()
-        #db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
+        # db.evi_ndvi.insert_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "data": _data})
         return _data
+
 
 @app.get('/modis/chart', response_class=HTMLResponse)
 def ndvi_chart(request: Request, lon: float, lat: float):
-    return templates.TemplateResponse("ndvi.html", {"request": request, "lon": lon, "lat": lat, "server_url": config('SERVER_URL')})
+    return templates.TemplateResponse("ndvi.html",
+                                      {"request": request, "lon": lon, "lat": lat, "server_url": config('SERVER_URL')})
+
 
 @app.get('/sentinel/evi/chart', response_class=HTMLResponse)
 def ndvi_chart(request: Request, lon: float, lat: float, start_date: str, end_date: str):
-    return templates.TemplateResponse("sentinel.html", {"request": request, "lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date, "server_url": config('SERVER_URL')})
+    return templates.TemplateResponse("sentinel.html",
+                                      {"request": request, "lon": lon, "lat": lat, "start_date": start_date,
+                                       "end_date": end_date, "server_url": config('SERVER_URL')})
 
 
 if __name__ == "__main__":
@@ -148,5 +155,6 @@ if __name__ == "__main__":
         port=int(config('PORT')),
         workers=os.cpu_count() - 2,
         reload=False,
+        timeout_keep_alive=15,
         log_config=config('LOG_CONFIG')
     )

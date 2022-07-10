@@ -5,8 +5,8 @@
     <style>
         .chart-container {
             position: relative;
-            height: 25vh;
-            width: 100%
+            height: 15vh;
+            width: 98%
         }
         /*loader_website*/
         .loader_website {
@@ -122,12 +122,15 @@
             text-align: center;
             margin: 0;
         }
+        #line-chart{
+            height: 800px !important;
+        }
     </style>
 </head>
 <body>
 <section class="chart-container">
-    <div id="range"></div>
     <canvas id="line-chart"></canvas>
+{#    <div id="range"></div>#}
 </section>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
@@ -198,23 +201,27 @@
     axios.get('{{server_url}}/sentinel/evi?lon={{lon}}&lat={{lat}}&start_date={{ start_date }}&&end_date={{ end_date }}')
         .then(function (response) {
             const dados = response.data;
+            console.log(dados)
             const chart = new Chart(document.getElementById("line-chart"), {
-                type: 'line',
+                type: 'bar',
                 responsive: true,
                 data: {
 
-                    labels: dados.dates.map(d => moment(d).format('DD-MM-YYYY')),
+                    labels: dados.dates.map(d => moment(d).format('DD/MM/YYYY')),
                     datasets: [
                         {
-                            data: dados.evi_wtk_smooth_series,
-                            label: "EVI Suavizado por Whittaker",
+                            data: dados.evi,
+                            label: "EVI Suavizado por Savitzky–Golay",
                             borderColor: "#009933",
-                            fill: true
+                            type: "line",
+                            fill: false
                         },
                         {
-                            data:  dados.evi_raw_series,
-                            label: "EVI Original",
-                            borderColor: "#8e5ea2",
+                            data:  dados.precipitation,
+                            label: "Precipitação  CHIRPS",
+                            borderColor: "#0a5291",
+                            backgroundColor: "rgba(80,103,180)",
+                            type: "bar",
                             fill: true
                         }
                     ]
@@ -228,16 +235,16 @@
             });
                 const range = document.getElementById('range');
                 noUiSlider.create(range, {
-                    start: [ 20, 80 ], // Handle start position
-                    step: 10, // Slider moves in increments of '10'
-                    margin: 20, // Handles must be more than '20' apart
+                    start: [ 0, dados.dates.length - 1 ], // Handle start position
+                    step: 1, // Slider moves in increments of '10'
+                    margin: 5, // Handles must be more than '20' apart
                     connect: true, // Display a colored bar between the handles
                     direction: 'rtl', // Put '0' at the bottom of the slider
-                    orientation: 'vertical', // Orient the slider vertically
+                    orientation: 'horizontal', // Orient the slider vertically
                     behaviour: 'tap-drag', // Move handle on tap, bar is draggable
                     range: {
                         'min': 0,
-                        'max': 100
+                        'max': dados.dates.length - 1
                     },
                     pips: { // Show a scale with the slider
                         mode: 'steps',
@@ -264,6 +271,7 @@
                 Loader.close()
         })
         .catch(function (error) {
+            Loader.close()
             console.error(error);
         });
 </script>
