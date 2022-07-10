@@ -107,5 +107,5 @@ def get_timeseries(lon: float, lat: float, start_date: str, end_date: str, day_s
     return {
         "dates": [date.strftime('%Y-%m-%d') for date in resample_evi.index.tolist()],
         "evi": resample_evi.EVI.values.tolist(),
-        "precipitation":  chirps_normalized,
+        "precipitation":  df_chirps.precipitation.values.tolist(),
     }

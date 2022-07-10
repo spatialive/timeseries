@@ -1,6 +1,6 @@
 <html>
 <head>
-    <title>Serie Temporal MODIS - NDVI para o ponto {{lon}} - {{lat}}</title>
+    <title>Serie Temporal MODIS - NDVI para o ponto {{ lon }} - {{ lat }}</title>
     <link href="//cdn.bootcss.com/noUiSlider/8.5.1/nouislider.min.css" rel="stylesheet">
     <style>
         .chart-container {
@@ -8,6 +8,7 @@
             height: 15vh;
             width: 98%
         }
+
         /*loader_website*/
         .loader_website {
             position: fixed;
@@ -110,10 +111,12 @@
             margin: 0 20px;
             text-align: center;
         }
+
         #range {
             height: 300px;
             margin: 0 auto 30px;
         }
+
         #value-span,
         #value-input {
             width: 50%;
@@ -122,7 +125,8 @@
             text-align: center;
             margin: 0;
         }
-        #line-chart{
+
+        #line-chart {
             height: 800px !important;
         }
     </style>
@@ -130,7 +134,7 @@
 <body>
 <section class="chart-container">
     <canvas id="line-chart"></canvas>
-{#    <div id="range"></div>#}
+    {#    <div id="range"></div>#}
 </section>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
@@ -210,14 +214,17 @@
                     labels: dados.dates.map(d => moment(d).format('DD/MM/YYYY')),
                     datasets: [
                         {
+                            yAxisID: 'evi',
                             data: dados.evi,
                             label: "EVI Suavizado por Savitzky–Golay",
                             borderColor: "#009933",
+                            backgroundColor: "#009933",
                             type: "line",
                             fill: false
                         },
                         {
-                            data:  dados.precipitation,
+                            yAxisID: 'precipitation',
+                            data: dados.precipitation,
                             label: "Precipitação  CHIRPS",
                             borderColor: "#0a5291",
                             backgroundColor: "rgba(80,103,180)",
@@ -230,45 +237,59 @@
                     title: {
                         display: true,
                         text: 'Serie Temporal Sentinel - EVI para o ponto [{{lat}},  {{lon}}]'
+                    },
+                    scales: {
+                        yAxes: [
+                            {
+                                id: 'evi',
+                                type: 'linear',
+                                position: 'left',
+                            },
+                            {
+                                id: 'precipitation',
+                                type: 'linear',
+                                position: 'right'
+                            }
+                        ]
                     }
                 }
             });
-                const range = document.getElementById('range');
-                noUiSlider.create(range, {
-                    start: [ 0, dados.dates.length - 1 ], // Handle start position
-                    step: 1, // Slider moves in increments of '10'
-                    margin: 5, // Handles must be more than '20' apart
-                    connect: true, // Display a colored bar between the handles
-                    direction: 'rtl', // Put '0' at the bottom of the slider
-                    orientation: 'horizontal', // Orient the slider vertically
-                    behaviour: 'tap-drag', // Move handle on tap, bar is draggable
-                    range: {
-                        'min': 0,
-                        'max': dados.dates.length - 1
-                    },
-                    pips: { // Show a scale with the slider
-                        mode: 'steps',
-                        density: 2
-                    }
-                });
+            const range = document.getElementById('range');
+            noUiSlider.create(range, {
+                start: [0, dados.dates.length - 1], // Handle start position
+                step: 1, // Slider moves in increments of '10'
+                margin: 5, // Handles must be more than '20' apart
+                connect: true, // Display a colored bar between the handles
+                direction: 'rtl', // Put '0' at the bottom of the slider
+                orientation: 'horizontal', // Orient the slider vertically
+                behaviour: 'tap-drag', // Move handle on tap, bar is draggable
+                range: {
+                    'min': 0,
+                    'max': dados.dates.length - 1
+                },
+                pips: { // Show a scale with the slider
+                    mode: 'steps',
+                    density: 2
+                }
+            });
 
-                let valueInput = document.getElementById('value-input'),
-                        valueSpan = document.getElementById('value-span');
+            let valueInput = document.getElementById('value-input'),
+                valueSpan = document.getElementById('value-span');
 
-                // When the slider value changes, update the input and span
-                range.noUiSlider.on('update', function( values, handle ) {
-                    if ( handle ) {
-                        valueInput.value = values[handle];
-                    } else {
-                        valueSpan.innerHTML = values[handle];
-                    }
-                });
+            // When the slider value changes, update the input and span
+            range.noUiSlider.on('update', function (values, handle) {
+                if (handle) {
+                    valueInput.value = values[handle];
+                } else {
+                    valueSpan.innerHTML = values[handle];
+                }
+            });
 
-                 // When the input changes, set the slider value
-                valueInput.addEventListener('change', function(){
-                    range.noUiSlider.set([null, this.value]);
-                });
-                Loader.close()
+            // When the input changes, set the slider value
+            valueInput.addEventListener('change', function () {
+                range.noUiSlider.set([null, this.value]);
+            });
+            Loader.close()
         })
         .catch(function (error) {
             Loader.close()
