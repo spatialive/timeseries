@@ -8,7 +8,7 @@ from scipy.signal import savgol_filter
 import scipy.sparse as sparse
 from scipy.sparse.linalg import splu
 import geopandas as gpd
-import stmetrics
+from datetime import datetime
 import warnings
 from random import randint
 from decouple import config
@@ -292,13 +292,13 @@ def gerate_graph_EVI_CHIRPS(lon: float, lat: float, start_date: str, end_date: s
         resample_evi.loc[:, 'EVI'] = savgol_filter(resample_evi.loc[:, 'EVI'].to_numpy(), window_length=13, polyorder=5)
 
     # Aplicando o phenometrics
-    x = stmetrics.phenology.phenometrics(resample_evi.loc[:, 'EVI'].to_numpy(), minimum_up=0.1, min_height=0.05,
-                                         smooth_fraction=0.05, periods=23, treshold=.9, window=11, iterations=1,
-                                         show=False)
-    length_season = (round(x['Length']) * day_spaced + 15).astype(np.int16)
-    length_season.index = np.arange(1, length_season.shape[0] + 1)
-    start_season = resample_evi.iloc[round(x['Start']).astype(np.int16), :]
-    end_season = resample_evi.iloc[round(x['End']).astype(np.int16), :]
+    # x = stmetrics.phenology.phenometrics(resample_evi.loc[:, 'EVI'].to_numpy(), minimum_up=0.1, min_height=0.05,
+    #                                      smooth_fraction=0.05, periods=23, treshold=.9, window=11, iterations=1,
+    #                                      show=False)
+    # length_season = (round(x['Length']) * day_spaced + 15).astype(np.int16)
+    # length_season.index = np.arange(1, length_season.shape[0] + 1)
+    # start_season = resample_evi.iloc[round(x['Start']).astype(np.int16), :]
+    # end_season = resample_evi.iloc[round(x['End']).astype(np.int16), :]
 
     # Chirps Image Collection
     chirps_pentad = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
@@ -332,6 +332,10 @@ def gerate_graph_EVI_CHIRPS(lon: float, lat: float, start_date: str, end_date: s
 
     result = {
         'dates': [date.strftime('%Y-%m-%d') for date in resample_evi.index.tolist()],
+        # 'evi': {
+        #     'dates':  ts_evi.Date.tolist(),
+        #     'values': ts_evi.EVI.values.tolist()
+        # },
         'evi': resample_evi.EVI.values.tolist(),
         'precipitation': df_chirps.precipitation.values.tolist()
     }

@@ -205,19 +205,16 @@
     axios.get('{{server_url}}/sentinel/evi?lon={{lon}}&lat={{lat}}&start_date={{ start_date }}&&end_date={{ end_date }}')
         .then(function (response) {
             const dados = response.data;
-            console.log(dados)
             const chart = new Chart(document.getElementById("line-chart"), {
                 type: 'bar',
-                responsive: true,
                 data: {
-
                     labels: dados.dates.map(d => moment(d).format('DD/MM/YYYY')),
                     datasets: [
                         {
-                            yAxisID: 'evi',
-                            data: dados.evi,
+                            yAxisID: 'evi_smoothed',
+                            data: dados.evi_smoothed,
                             label: "EVI Suavizado por Savitzky–Golay",
-                            borderColor: "#009933",
+                            borderColor: "#2d8a4c",
                             backgroundColor: "#009933",
                             type: "line",
                             fill: false
@@ -234,6 +231,7 @@
                     ]
                 },
                 options: {
+                    responsive: true,
                     title: {
                         display: true,
                         text: 'Serie Temporal Sentinel - EVI para o ponto [{{lat}},  {{lon}}]'
@@ -241,7 +239,7 @@
                     scales: {
                         yAxes: [
                             {
-                                id: 'evi',
+                                id: 'evi_smoothed',
                                 type: 'linear',
                                 position: 'left',
                             },
