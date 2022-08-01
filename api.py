@@ -5,9 +5,9 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from pymongo import MongoClient
+# from pymongo import MongoClient
 from decouple import config
-from src.ts import gerate_graph_EVI_CHIRPS
+from src.ts import gerate_graph_EVI_CHIRPS_campaign, gerate_graph_EVI_CHIRPS_public
 from fastapi.responses import JSONResponse
 import orjson
 
@@ -21,8 +21,8 @@ class ORJSONResponse(JSONResponse):
 
 app = FastAPI(default_response_class=ORJSONResponse)
 
-client = MongoClient(config('MONGO_HOST'), int(config('MONGO_PORT')))
-db = client[config('MONGO_DB')]
+# client = MongoClient(config('MONGO_HOST'), int(config('MONGO_PORT')))
+# db = client[config('MONGO_DB')]
 
 origins = [
     "*",
@@ -49,12 +49,17 @@ def read_root():
 
 
 @app.get('/sentinel/evi')
-def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str):
-    series = db.sentinel_evi.find_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date})
+def sentinel_evi(lon: float, lat: float, start_date: str, end_date: str, origin: str = "campaign"):
+#     series = db.sentinel_evi.find_one({"lon": lon, "lat": lat, "start_date": start_date, "end_date": end_date})
+    series = None
     if series is not None:
         return series
     else:
-        return gerate_graph_EVI_CHIRPS(lon, lat, start_date, end_date, 8, 'savgol')
+        if origin != "campaign":
+            return gerate_graph_EVI_CHIRPS_public(lon, lat, start_date, end_date, 8, 'savgol')
+        else:
+            return gerate_graph_EVI_CHIRPS_campaign(lon, lat, start_date, end_date, 8, 'savgol')
+
 
 
 @app.get('/sentinel/evi/chart', response_class=HTMLResponse)

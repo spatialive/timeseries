@@ -252,6 +252,7 @@ def resample_data(evi_dataframe: gpd.GeoDataFrame, date_start: str, date_end: st
     df_merge = df_merge.sort_values('Date', ignore_index=True)
     df_merge = df_merge.rename(columns={'EVI_y': 'EVI'})
     df_merge = df_merge.set_index('Date')
+    evi_original = df_merge.loc[:, 'EVI'].copy()
 
     # Aplicação do interpolador RBF
     rbf_smooth = rbf_smoother(df_merge.loc[:, 'EVI'].to_numpy())
@@ -261,10 +262,10 @@ def resample_data(evi_dataframe: gpd.GeoDataFrame, date_start: str, date_end: st
     unsample = df_merge.resample('8D').interpolate(method='cubicspline')  # bc_type='natural'
     # unsample = df_merge.resample('8D').max()
 
-    return unsample
+    return unsample, evi_original
 
 
-def gerate_graph_EVI_CHIRPS(lon: float, lat: float, start_date: str, end_date: str, day_spaced: int, smooth: str) -> dict:
+def gerate_graph_EVI_CHIRPS_campaign(lon: float, lat: float, start_date: str, end_date: str, day_spaced: int, smooth: str) -> dict:
     gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
     ee.Initialize()
 
@@ -332,11 +333,76 @@ def gerate_graph_EVI_CHIRPS(lon: float, lat: float, start_date: str, end_date: s
 
     result = {
         'dates': [date.strftime('%Y-%m-%d') for date in resample_evi.index.tolist()],
-        # 'evi': {
-        #     'dates':  ts_evi.Date.tolist(),
-        #     'values': ts_evi.EVI.values.tolist()
-        # },
         'evi': resample_evi.EVI.values.tolist(),
+        'precipitation': df_chirps.precipitation.values.tolist()
+    }
+
+    ee.Reset()
+
+    return result
+
+
+def gerate_graph_EVI_CHIRPS_public(lon: float, lat: float, start_date: str, end_date: str, day_spaced: int, smooth: str) -> dict:
+    gee_multi_credentials(config('GEE_CREDENCIALS_DIR'))
+    ee.Initialize()
+
+    # Extrai serie temporal do Sentinel 2
+    tent = 0
+    while True:
+        try:
+            ts_evi = ts_s2_collection(lon, lat, start_date, end_date)
+        except Exception as e:
+            tent += 1
+            if (tent == 20):
+                raise Exception(f'Error na conexão com o GEE. Mensagem de erro:{e}')
+            continue
+        break
+
+    # Aplicação do RBF e resample para espacamento de 8 dias
+    resample_evi, evi_original = resample_data(ts_evi, start_date, end_date, day_spaced)
+
+    # Aplicação de suavizador
+    if (smooth == 'whittaker'):
+        # Whittaker smoother
+        resample_evi.loc[:, 'EVI'] = whittaker_smooth(resample_evi.loc[:, 'EVI'].to_numpy(), 10, d=2)
+    elif (smooth == 'savgol'):
+        # Savitzky-Golay smoother
+        resample_evi.loc[:, 'EVI'] = savgol_filter(resample_evi.loc[:, 'EVI'].to_numpy(), window_length=13, polyorder=5)
+
+    # Chirps Image Collection
+    chirps_pentad = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
+
+    # Criação da feature Point no earth engine
+    geometry = ee.Geometry.Point(lon, lat)
+
+    # Extração da série temporal do CHIRPS Pentad do EE para o Python
+    tent = 0
+    while True:
+        try:
+            chirps_p = chirps_pentad.filterBounds(geometry).filterDate(start_date, end_date).getRegion(geometry,
+                                                                                                       5).getInfo()
+        except Exception as e:
+            tent += 1
+            if (tent == 20):
+                raise Exception(f'Error na conexão com o GEE. Mensagem de erro:{e}')
+            continue
+        break
+
+    out = [dict(zip(chirps_p[0], values)) for values in chirps_p[1:]]
+
+    # Transformaçẽos da série temporal de CHIRPS para DataFrame
+    df_chirps = pd.DataFrame(out)
+    df_chirps = df_chirps.loc[:, ['id', 'precipitation']]
+    df_chirps['id'] = pd.to_datetime(df_chirps['id'])
+    df_chirps = df_chirps.sort_values(by=['id'])
+    df_chirps = df_chirps.rename(columns={'id': 'Date'})
+    df_chirps = df_chirps.set_index('Date')
+    df_chirps = df_chirps.resample('8D').sum()
+
+    result = {
+        'dates': [date.strftime('%Y-%m-%d') for date in resample_evi.index.tolist()],
+        'evi': resample_evi.EVI.values.tolist(),
+        'evi_orginal': evi_original.values.tolist(),
         'precipitation': df_chirps.precipitation.values.tolist()
     }
 

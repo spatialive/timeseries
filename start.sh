@@ -1,2 +1,2 @@
 #!/bin/sh
-python3 api.py
+python api.py
