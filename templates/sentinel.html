@@ -139,7 +139,6 @@
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.7.0/moment.min.js" type="text/javascript"></script>
-<script src="//cdn.bootcss.com/noUiSlider/8.5.1/nouislider.js"></script>
 <script>
     const Loader = {
         loader: null,
@@ -205,11 +204,23 @@
     axios.get('{{server_url}}/sentinel/evi?lon={{lon}}&lat={{lat}}&start_date={{ start_date }}&&end_date={{ end_date }}')
         .then(function (response) {
             const dados = response.data;
-            const chart = new Chart(document.getElementById("line-chart"), {
+            new Chart(document.getElementById("line-chart"), {
                 type: 'bar',
                 data: {
                     labels: dados.dates.map(d => moment(d).format('DD/MM/YYYY')),
                     datasets: [
+                        {
+                            data: dados.evi_original,
+                            type: "line",
+                            label: "EVI",
+                            borderColor: '#006600',
+                            backgroundColor: '#99ff99',
+                            pointStyle: 'circle',
+                            pointRadius: 10,
+                            pointHoverRadius: 15,
+                            tension: 0,
+                            fill: false
+                        },
                         {
                             yAxisID: 'evi_smoothed',
                             data: dados.evi_smoothed,
@@ -252,46 +263,12 @@
                     }
                 }
             });
-            const range = document.getElementById('range');
-            noUiSlider.create(range, {
-                start: [0, dados.dates.length - 1], // Handle start position
-                step: 1, // Slider moves in increments of '10'
-                margin: 5, // Handles must be more than '20' apart
-                connect: true, // Display a colored bar between the handles
-                direction: 'rtl', // Put '0' at the bottom of the slider
-                orientation: 'horizontal', // Orient the slider vertically
-                behaviour: 'tap-drag', // Move handle on tap, bar is draggable
-                range: {
-                    'min': 0,
-                    'max': dados.dates.length - 1
-                },
-                pips: { // Show a scale with the slider
-                    mode: 'steps',
-                    density: 2
-                }
-            });
 
-            let valueInput = document.getElementById('value-input'),
-                valueSpan = document.getElementById('value-span');
-
-            // When the slider value changes, update the input and span
-            range.noUiSlider.on('update', function (values, handle) {
-                if (handle) {
-                    valueInput.value = values[handle];
-                } else {
-                    valueSpan.innerHTML = values[handle];
-                }
-            });
-
-            // When the input changes, set the slider value
-            valueInput.addEventListener('change', function () {
-                range.noUiSlider.set([null, this.value]);
-            });
             Loader.close()
         })
         .catch(function (error) {
             Loader.close()
-            console.error(error);
+            console.log(error);
         });
 </script>
 </body>
