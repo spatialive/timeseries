@@ -224,45 +224,68 @@ def ts_s2_collection(lon: float, lat: float, start_date: str, end_date: str) -> 
     return df
 
 
-def resample_data(evi_dataframe: gpd.GeoDataFrame, date_start: str, date_end: str, n_day: int) -> gpd.GeoDataFrame:
+def resample_data(evi_dataframe: gpd.GeoDataFrame, date_start: str,date_end: str, n_day: int) -> gpd.GeoDataFrame:
+
     '''
     Função para aplicar a interpolação RBF e realizar uma reamostragem com o espaçemento de n_days na série temporal
     '''
 
     # Data de ínicio e fim da reamostragem
-    date_start = np.datetime64(date_start)  # '2020-08-01'
-    date_end = np.datetime64(date_end)  # '2021-10-01'
+    date_start = np.datetime64(date_start)
+    date_end = np.datetime64(date_end)
     data_evi = evi_dataframe
 
+    # Criação do intervalo de espaçados em 8
+    data_range = pd.to_datetime(np.arange(date_start, date_end, np.timedelta64(8,"D"),dtype='datetime64[ns]'))
+    evi_nan = np.empty(data_range.shape)
+    evi_nan[:] = np.nan
+
+    # Criação do dataframe vazio espaçado em 8
+    dic_evi8 = {
+        'Date':data_range,
+        'EVI':evi_nan
+    }
+    data_evi8 = pd.DataFrame(dic_evi8)
+    
+    # Combinação ente o dataframe espaçado e o evi_dataframe (série temporal do EVI)
+    df_merge = data_evi8.merge(data_evi, on="Date", how="outer", validate="one_to_many")
+    df_merge = df_merge.drop(['EVI_x'],axis=1)
+    df_merge = df_merge.sort_values('Date', ignore_index=True)
+    df_merge = df_merge.rename(columns={'EVI_y':'EVI'})
+    df_merge = df_merge.set_index('Date')
+
+    # Aplicação do interpolador RBF
+    rbf_smooth = rbf_smoother(df_merge.loc[:,'EVI'].to_numpy())
+    df_merge.loc[:,'EVI'] = rbf_smooth
+
+    # Reamostragem com Cubic Spline em n_day dias
+    unsample = df_merge.resample(f'{n_day}D').interpolate(method='cubicspline') #bc_type='natural'
+
     # Criação do intervalo de espaçados em n_days
-    data_range = pd.to_datetime(np.arange(date_start, date_end, np.timedelta64(n_day, "D"), dtype='datetime64[ns]'))
+    data_range = pd.to_datetime(np.arange(unsample.index[0], unsample.index[-1] + pd.Timedelta(1, unit="d"), np.timedelta64(n_day,"D"),dtype='datetime64[ns]'))
     evi_nan = np.empty(data_range.shape)
     evi_nan[:] = np.nan
 
     # Criação do dataframe vazio espaçado em n_day
-    dic_evi8 = {
-        'Date': data_range,
-        'EVI': evi_nan
+    dic_evi_n = {
+        'Date':data_range,
+        'EVI':evi_nan
     }
-    data_evi8 = pd.DataFrame(dic_evi8)
+    data_evi_n = pd.DataFrame(dic_evi_n)
 
-    # Combinação ente o dataframe espaçado e o evi_dataframe (série temporal do EVI)
-    df_merge = data_evi8.merge(data_evi, on="Date", how="outer", validate="one_to_many")
-    df_merge = df_merge.drop(['EVI_x'], axis=1)
-    df_merge = df_merge.sort_values('Date', ignore_index=True)
-    df_merge = df_merge.rename(columns={'EVI_y': 'EVI'})
-    df_merge = df_merge.set_index('Date')
-    evi_original = df_merge.loc[:, 'EVI'].copy()
+    # Geração do dataframe para adequar os valores de EVI bruto com as datas idealmente espaçadas
+    for index, row in data_evi_n.iterrows():
+        sub_dates = data_evi.Date - row.Date
+        sub_dates = np.array([abs(int(data.total_seconds()/(60*60*24))) for data in sub_dates])
+        if  np.min(sub_dates) >= n_day:
+            data_evi_n.loc[index, 'EVI'] = np.nan
+        else:
+            data_evi_n.loc[index, 'EVI'] = data_evi.loc[np.argmin(sub_dates), 'EVI']
 
-    # Aplicação do interpolador RBF
-    rbf_smooth = rbf_smoother(df_merge.loc[:, 'EVI'].to_numpy())
-    df_merge.loc[:, 'EVI'] = rbf_smooth
+    # Acrescentando EVI Original no dataframe
+    unsample.loc[:, 'EVI_Bruto'] = data_evi_n.loc[:, 'EVI'].to_numpy()
 
-    # Reamostragem com Cubic Spline em 8 dias
-    unsample = df_merge.resample('8D').interpolate(method='cubicspline')  # bc_type='natural'
-    # unsample = df_merge.resample('8D').max()
-
-    return unsample, evi_original
+    return unsample
 
 
 def gerate_graph_EVI_CHIRPS_campaign(lon: float, lat: float, start_date: str, end_date: str, day_spaced: int, smooth: str) -> dict:
@@ -359,7 +382,7 @@ def gerate_graph_EVI_CHIRPS_public(lon: float, lat: float, start_date: str, end_
         break
 
     # Aplicação do RBF e resample para espacamento de 8 dias
-    resample_evi, evi_original = resample_data(ts_evi, start_date, end_date, day_spaced)
+    resample_evi = resample_data(ts_evi, start_date, end_date, day_spaced)
 
     # Aplicação de suavizador
     if (smooth == 'whittaker'):
@@ -402,7 +425,7 @@ def gerate_graph_EVI_CHIRPS_public(lon: float, lat: float, start_date: str, end_
     result = {
         'dates': [date.strftime('%Y-%m-%d') for date in resample_evi.index.tolist()],
         'evi': resample_evi.EVI.values.tolist(),
-        'evi_orginal': evi_original.values.tolist(),
+        'evi_orginal': resample_evi.EVI_Bruto.values.tolist(),
         'precipitation': df_chirps.precipitation.values.tolist()
     }
 
